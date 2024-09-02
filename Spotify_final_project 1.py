@@ -43,132 +43,25 @@ def _prepare_data():
 
 ## STAGE 
 
+def postgres_creator():  # sqlalchemy requires callback-function for connections
+  return ps.connect(
+        dbname="tuomas",  # name of schema
+        user="tuomas"
+    #   password=db_pw,
+    #   port=5432,          # default port is 5432, but can be specified
+    #   host="localhost"
+  )
+
+postgres_engine = create_engine(
+    url="postgresql+psycopg2://localhost",  # driver identification + dbms api
+    creator=postgres_creator  # connection details
+)
+
+# Data processing
+
 spotify_prepared_data_path = SPOTIFY_PREPARED_CSV
 
-def execute_sql_commands():
-    # Connect to the database using psycopg2
-    conn = ps.connect(dbname="tuomas", user="tuomas")
-    cur = conn.cursor()
-
-    # List of SQL commands to execute
-    sql_commands = [
-        """
-        CREATE TABLE IF NOT EXISTS public.tracks (
-            track_id serial NOT NULL,
-            track_name text,
-            track_lenghts integer,
-            date_id integer,
-            album_id integer,
-            popularity_id integer,
-            PRIMARY KEY (track_id)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS public.album (
-            album_id serial NOT NULL,
-            album_name text,
-            album_link text,
-            album_type text,
-            total_tracks integer,
-            release_year integer,
-            PRIMARY KEY (album_id)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS public.listening_date (
-            date_id serial NOT NULL,
-            date_time timestamp without time zone,
-            hour integer,
-            weekday text,
-            week_of_year integer,
-            month_num integer,
-            month_name text,
-            quarter integer,
-            year integer,
-            weekend text,
-            PRIMARY KEY (date_id)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS public.artists (
-            artist_id serial NOT NULL,
-            artist text,
-            PRIMARY KEY (artist_id)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS public.popularity (
-            popularity_id serial NOT NULL,
-            popularity integer,
-            PRIMARY KEY (popularity_id)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS public.artists_tracks (
-            track_id integer,
-            artist_id integer,
-            id serial NOT NULL,
-            PRIMARY KEY (id)
-        );
-        """,
-        """
-        ALTER TABLE IF EXISTS public.tracks
-            ADD CONSTRAINT tracks_listening_date FOREIGN KEY (date_id)
-            REFERENCES public.listening_date (date_id) MATCH SIMPLE
-            ON UPDATE NO ACTION
-            ON DELETE NO ACTION
-            NOT VALID;
-        """,
-        """
-        ALTER TABLE IF EXISTS public.tracks
-            ADD CONSTRAINT tracks_album FOREIGN KEY (album_id)
-            REFERENCES public.album (album_id) MATCH SIMPLE
-            ON UPDATE NO ACTION
-            ON DELETE NO ACTION
-            NOT VALID;
-        """,
-        """
-        ALTER TABLE IF EXISTS public.tracks
-            ADD CONSTRAINT tracks_popularity FOREIGN KEY (popularity_id)
-            REFERENCES public.popularity (popularity_id) MATCH SIMPLE
-            ON UPDATE NO ACTION
-            ON DELETE NO ACTION
-            NOT VALID;
-        """,
-        """
-        ALTER TABLE IF EXISTS public.artists_tracks
-            ADD CONSTRAINT arttrack_tracks FOREIGN KEY (track_id)
-            REFERENCES public.tracks (track_id) MATCH SIMPLE
-            ON UPDATE NO ACTION
-            ON DELETE NO ACTION
-            NOT VALID;
-        """,
-        """
-        ALTER TABLE IF EXISTS public.artists_tracks
-            ADD CONSTRAINT arttrack_artists FOREIGN KEY (artist_id)
-            REFERENCES public.artists (artist_id) MATCH SIMPLE
-            ON UPDATE NO ACTION
-            ON DELETE NO ACTION
-            NOT VALID;
-        """
-    ]
-
-    # Execute each SQL command
-    for command in sql_commands:
-        cur.execute(command)
-
-    # Commit the changes to the database
-    conn.commit()
-
-    # Close the cursor and the connection
-    cur.close()
-    conn.close()
-
-
-
 def _stage():
-    execute_sql_commands()
-    
     spotify_data = pd.read_csv(
     spotify_prepared_data_path,
     sep=",",
