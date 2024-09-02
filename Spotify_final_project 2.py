@@ -16,69 +16,82 @@ import matplotlib.pyplot as oPlot
 
 from datetime import datetime, timedelta
 
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+import logging
+
 
 ## Folders and targets
 AIRFLOW_HOME = os.environ['AIRFLOW_HOME']
 config = configparser.ConfigParser()
 config.read(AIRFLOW_HOME + '/airflow.cfg')
 AIRFLOW_DAGS = config.get('core', 'dags_folder')
-SPOTIFY_JSON_TARGET = AIRFLOW_DAGS + '/spotify/spotify.json' # download from Spotify
-SPOTIFY_PREPARED_CSV = AIRFLOW_DAGS + '/spotify/spotify_prepared.csv' # prepared data to csv format
 CURR_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
-## Function to download the json data from API and save the data in json format to SPOTIFY_JSON_TARGET
-# WE NEED TO HAVE A CONFIG FILE TO SAVE API KEY
-def _download_from_spotify_api():
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
-    response_api = requests.get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=59.90&lon=10.75",headers = headers)
-    return response_api
-
-
-
-
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-import pandas as pd
-import json
-import logging
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-
-# Spotify API credentials
+# Spotify API credentials # Later we can create a config file to hide the below credentials
 client_id = '7ac4100bc0f84e978f1b4c8e4b74576b'
 client_secret = '62fed3a94a224ef48272a7b3d8ea0583'
 redirect_uri = 'http://localhost:8888/callback'
 scope = 'user-read-recently-played'
 
-# Initialize Spotipy with Spotify credentials
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
-                                               client_secret=client_secret,
-                                               redirect_uri=redirect_uri,
-                                               scope=scope))
 
-# Fetch recently played tracks
-results = sp.current_user_recently_played(limit=50)
+## Function to download the json data from API and save the data in json format to SPOTIFY_JSON_TARGET
+def _download_from_spotify_api():
+    # Set up logging
+    logging.basicConfig(level=logging.INFO)
 
-# Save raw JSON data
-with open('recently_played_tracks_raw.json', 'w', encoding='utf-8') as f:
-    json.dump(results, f, ensure_ascii=False, indent=4)
-logging.info("Raw data saved to recently_played_tracks_raw.json")
+    # Initialize Spotipy with Spotify credentials
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
+                                                client_secret=client_secret,
+                                                redirect_uri=redirect_uri,
+                                                scope=scope))
+    
+    # Fetch recently played tracks
+    results = sp.current_user_recently_played(limit=50)
 
-# Convert JSON to DataFrame and save as CSV
-df = pd.json_normalize(results['items'])  # Flatten the JSON structure to create a table
-df.to_csv('recently_played_tracks_raw.csv', index=False)
-logging.info("Raw data saved to recently_played_tracks_raw.csv")
-
-
+    # Save raw JSON data
+    with open('recently_played_tracks_raw.json', 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
+    logging.info("Raw data saved to recently_played_tracks_raw.json")
+    
+    # Convert JSON to DataFrame and save as CSV
+    df = pd.json_normalize(results['items'])  # Flatten the JSON structure to create a table
+    df.to_csv('recently_played_tracks_raw.csv', index=False)
+    logging.info("Raw data saved to recently_played_tracks_raw.csv")
 
 
 ## Prepare the data and save it in csv format to SPOTIFY_PREPARED_CSV
 def _prepare_data():
-    json_data = pd.read_json(SPOTIFY_JSON_TARGET)
+    json_data = pd.read_csv('recently_played_tracks_raw.csv')
+    album_name = []
+    album_type = []
+    album_total_tracks = []
+    album_available_markets = []
+    album_release_date = []
+    album_artist = []
+    song_names = []
+    artist_names = []
+    played_at_list = []
+    timestamps = []
+
+    # Extracting only the relevant bits of data from the json object      
+    for song in data["items"]:
+        album_name.append(song["track"]["album"]['name'])
+        album_type.append(song["track"]["album"]['album_type'])
+        album_total_tracks.append(song["track"]["album"]['total_tracks'])
+        album_available_markets.append(song["track"]["album"]['available_markets'])
+        album_release_date.append(song["track"]["album"]['release_date'])
+        album_artist.append(song["track"]["album"]['artists'])
+        song_names.append(song["track"]["name"])
+        artist_names.append(song["track"]["album"]["artists"][0]["name"])
+        played_at_list.append(song["played_at"])
+        timestamps.append(song["played_at"][0:10])
 
     df_spotify.to_csv(SPOTIFY_PREPARED_CSV, header=True)
+
+
+
 
 
 ## STAGE 
