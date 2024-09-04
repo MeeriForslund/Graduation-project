@@ -162,13 +162,22 @@ def _prepare_data():
     combined_data.rename(columns={'track.album.name': 'album_name'}, inplace=True)
     combined_data.rename(columns={'track.album.release_date': 'release_date'}, inplace=True)
     combined_data.rename(columns={'track.album.total_tracks': 'total_tracks'}, inplace=True)
-    combined_data.rename(columns={'track.duration_sec': 'track_lenghts'}, inplace=True)
+    combined_data.rename(columns={'track.duration_sec': 'track_lenght'}, inplace=True)
     combined_data.rename(columns={'track.popularity': 'popularity'}, inplace=True)
     combined_data.rename(columns={'artist_names': 'artist'}, inplace=True)
     combined_data.rename(columns={'track.name': 'track_name'}, inplace=True)
+
+    # Change the type of artist columns contents to strings, round the track_lenght, change the date_time to date
+    combined_data['artist'] = combined_data['artist'].apply(lambda x: str(x) if isinstance(x, list) else x)
+    combined_data['track_lenghts'] = combined_data['track_lenght'].round(0)
+    combined_data['date_time'] = pd.to_datetime(combined_data['date_time']).dt.date
+    combined_data.rename(columns={'date_time': 'dates'}, inplace=True)
     
     # Save the combined DataFrame to a new CSV file
     combined_data.to_csv('combined_spotify.csv', index=False)
+
+
+
 
 
 
@@ -180,109 +189,109 @@ def execute_sql_commands():
     # List of SQL commands to execute
     sql_commands = [
         """
-            CREATE TABLE IF NOT EXISTS public.tracks
-            (
-                track_id serial NOT NULL,
-                track_name text,
-                length_id integer,
-                date_id integer,
-                album_id integer,
-                popularity_id integer,
-                artist_id integer,
-                PRIMARY KEY (track_id)
-            );
+CREATE TABLE IF NOT EXISTS public.tracks
+(
+    track_id serial NOT NULL,
+    track_name text,
+    length_id integer,
+    date_id integer,
+    album_id integer,
+    popularity_id integer,
+    artist_id integer,
+    PRIMARY KEY (track_id)
+);
 
         """,
         """
-            CREATE TABLE IF NOT EXISTS public.album
-            (
-                album_id serial NOT NULL,
-                album_name text,
-                album_type text,
-                total_tracks integer,
-                release_date date,
-                PRIMARY KEY (album_id)
-            );
+CREATE TABLE IF NOT EXISTS public.album
+(
+    album_id serial NOT NULL,
+    album_name text,
+    album_type text,
+    total_tracks integer,
+    release_date date,
+    PRIMARY KEY (album_id)
+);
         """,
         """
-            CREATE TABLE IF NOT EXISTS public.listening_date
-            (
-                date_id serial NOT NULL,
-                date_time date,
-                hour integer,
-                weekday text,
-                week_of_year integer,
-                month_num integer,
-                month_name text,
-                quarter integer,
-                year integer,
-                weekend text,
-                PRIMARY KEY (date_id)
-            );
+CREATE TABLE IF NOT EXISTS public.listening_date
+(
+    date_id serial NOT NULL,
+    dates date,
+    hour integer,
+    weekday text,
+    week_of_year integer,
+    month_num integer,
+    month_name text,
+    quarter integer,
+    year integer,
+    weekend text,
+    PRIMARY KEY (date_id)
+);
         """,
         """
-            CREATE TABLE IF NOT EXISTS public.popularity
-            (
-                popularity_id serial NOT NULL,
-                popularity integer,
-                PRIMARY KEY (popularity_id)
-            );
+CREATE TABLE IF NOT EXISTS public.artists
+(
+    artist_id serial NOT NULL,
+    artist text,
+    PRIMARY KEY (artist_id)
+);
         """,
         """
-            CREATE TABLE IF NOT EXISTS public.artists
-            (
-                artist_id serial NOT NULL,
-                artist_name text,
-                PRIMARY KEY (artist_id)
-            );
+CREATE TABLE IF NOT EXISTS public.popularity
+(
+    popularity_id serial NOT NULL,
+    popularity integer,
+    PRIMARY KEY (popularity_id)
+);
         """,
         """
-            CREATE TABLE IF NOT EXISTS public.lengths
-            (
-                length_id serial NOT NULL,
-                length integer,
-                PRIMARY KEY (length_id)
-            );
+CREATE TABLE IF NOT EXISTS public.lengths
+(
+    length_id serial NOT NULL,
+    track_lenght integer,
+    PRIMARY KEY (length_id)
+);
         """,
         """
-            ALTER TABLE IF EXISTS public.tracks
-                ADD CONSTRAINT tracks_listening_date FOREIGN KEY (date_id)
-                REFERENCES public.listening_date (date_id) MATCH SIMPLE
-                ON UPDATE NO ACTION
-                ON DELETE NO ACTION
-                NOT VALID;
+ALTER TABLE IF EXISTS public.tracks
+    ADD CONSTRAINT tracks_listening_date FOREIGN KEY (date_id)
+    REFERENCES public.listening_date (date_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
         """,
         """
-            ALTER TABLE IF EXISTS public.tracks
-                ADD CONSTRAINT tracks_album FOREIGN KEY (album_id)
-                REFERENCES public.album (album_id) MATCH SIMPLE
-                ON UPDATE NO ACTION
-                ON DELETE NO ACTION
-                NOT VALID;
+ALTER TABLE IF EXISTS public.tracks
+    ADD CONSTRAINT tracks_album FOREIGN KEY (album_id)
+    REFERENCES public.album (album_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
         """,
         """
-            ALTER TABLE IF EXISTS public.tracks
-                ADD CONSTRAINT tracks_popularity FOREIGN KEY (popularity_id)
-                REFERENCES public.popularity (popularity_id) MATCH SIMPLE
-                ON UPDATE NO ACTION
-                ON DELETE NO ACTION
-                NOT VALID;
+ALTER TABLE IF EXISTS public.tracks
+    ADD CONSTRAINT tracks_popularity FOREIGN KEY (popularity_id)
+    REFERENCES public.popularity (popularity_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
         """,
         """
-            ALTER TABLE IF EXISTS public.tracks
-                ADD CONSTRAINT tracks_artists FOREIGN KEY (artist_id)
-                REFERENCES public.artists (artist_id) MATCH SIMPLE
-                ON UPDATE NO ACTION
-                ON DELETE NO ACTION
-                NOT VALID;
+ALTER TABLE IF EXISTS public.tracks
+    ADD CONSTRAINT tracks_artists FOREIGN KEY (artist_id)
+    REFERENCES public.artists (artist_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
         """,
         """
-            ALTER TABLE IF EXISTS public.tracks
-                ADD CONSTRAINT tracks_lengths FOREIGN KEY (length_id)
-                REFERENCES public.lengths (length_id) MATCH SIMPLE
-                ON UPDATE NO ACTION
-                ON DELETE NO ACTION
-                NOT VALID;
+ALTER TABLE IF EXISTS public.tracks
+    ADD CONSTRAINT track_length FOREIGN KEY (length_id)
+    REFERENCES public.lengths (length_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
         """
     ]
 
@@ -313,6 +322,8 @@ postgres_engine = create_engine(
     creator=postgres_creator  # connection details
 )
 
+
+
 def _stage():
     # Ensure that tables exist by running SQL commands
     execute_sql_commands()
@@ -322,101 +333,36 @@ def _stage():
 
     # Read the data from the combined CSV file
     combined_data = pd.read_csv(combined_data_path)
-    combined_data['track_lenghts'] = combined_data['track_lenghts'].round(0)
-
-    # Ensure date_time is stripped of any extra spaces and converted to datetime.date object
-    combined_data['date_time'] = pd.to_datetime(combined_data['date_time']).dt.date
-
-    # Connect to the PostgreSQL database
-    with postgres_engine.connect() as conn:
-        # Prepare album data and handle duplicates
-        album_df = combined_data[['album_name', 'album_type', 'total_tracks', 'release_date']].drop_duplicates()
-        album_df.to_sql('album', conn, if_exists='append', index=False, method='multi')
-
-        # Prepare popularity data and handle potential duplicates
-        popularity_df = combined_data[['popularity']].drop_duplicates()
-        popularity_df.to_sql('popularity', conn, if_exists='append', index=False, method='multi')
-
-        # Prepare listening_date data and handle duplicates
-        listening_date_df = combined_data[['date_time', 'hour', 'weekday', 'week_of_year', 'month_num', 'month_name', 'quarter', 'year', 'weekend']].drop_duplicates()
-        listening_date_df.to_sql('listening_date', conn, if_exists='append', index=False, method='multi')
-
-        # Prepare lengths data (track lengths) and handle duplicates
-        lengths_df = combined_data[['track_lenghts']].drop_duplicates()
-        lengths_df = lengths_df.rename(columns={'track_lenghts': 'length'})
-        lengths_df.to_sql('lengths', conn, if_exists='append', index=False, method='multi')
-
-        # Prepare artist data and handle duplicates
-        artists_df = combined_data[['artist']].drop_duplicates()
-        artists_df = artists_df.explode('artist')  # Split the artist column into multiple rows
-        artists_df = artists_df.drop_duplicates().rename(columns={'artist': 'artist_name'})
-        artists_df.to_sql('artists', conn, if_exists='append', index=False, method='multi')
-
-        # Extract ID mappings from inserted data
-        album_id_map = {row['album_name']: row['album_id'] for row in conn.execute('SELECT album_id, album_name FROM public.album').fetchall()}
-        popularity_id_map = {row['popularity']: row['popularity_id'] for row in conn.execute('SELECT popularity_id, popularity FROM public.popularity').fetchall()}
-        listening_date_id_map = {row['date_time']: row['date_id'] for row in conn.execute('SELECT date_id, date_time FROM public.listening_date').fetchall()}
-        length_id_map = {row['length']: row['length_id'] for row in conn.execute('SELECT length_id, length FROM public.lengths').fetchall()}
-        artist_id_map = {row['artist_name']: row['artist_id'] for row in conn.execute('SELECT artist_id, artist_name FROM public.artists').fetchall()}
-
-        # Debug: Print available keys in listening_date_id_map and other maps to inspect them
-        print(f"Available keys in listening_date_id_map: {list(listening_date_id_map.keys())}")
-        print(f"Available keys in album_id_map: {list(album_id_map.keys())}")
-        print(f"Available keys in popularity_id_map: {list(popularity_id_map.keys())}")
-        print(f"Available keys in length_id_map: {list(length_id_map.keys())}")
-        print(f"Available keys in artist_id_map: {list(artist_id_map.keys())}")
-
-        # Prepare track data with IDs
-        track_data = combined_data[['track_name', 'track_lenghts', 'date_time', 'album_name', 'popularity', 'artist']].copy()
-        track_data['album_id'] = track_data['album_name'].map(album_id_map)
-        track_data['popularity_id'] = track_data['popularity'].map(popularity_id_map)
-        track_data['date_id'] = track_data['date_time'].map(listening_date_id_map)
-        track_data['length_id'] = track_data['track_lenghts'].map(length_id_map)
-
-        # Check for missing values in the mapped IDs
-        print(f"Missing album IDs: {track_data[track_data['album_id'].isna()]}")
-        print(f"Missing popularity IDs: {track_data[track_data['popularity_id'].isna()]}")
-        print(f"Missing date IDs: {track_data[track_data['date_id'].isna()]}")
-        print(f"Missing length IDs: {track_data[track_data['length_id'].isna()]}")
-
-        # Insert tracks into the 'tracks' table
-        track_data = track_data[['track_name', 'length_id', 'date_id', 'album_id', 'popularity_id']].drop_duplicates()
-        track_data.to_sql('tracks', conn, if_exists='append', index=False, method='multi')
-
-        # Link artists to tracks
-        for _, row in combined_data.iterrows():
-            # Ensure the date_time has no leading/trailing spaces and exists in the map
-            date_time_stripped = row['date_time']
-            track_id = conn.execute(
-                'SELECT track_id FROM public.tracks WHERE track_name = %s AND length_id = %s AND date_id = %s AND album_id = %s AND popularity_id = %s',
-                (
-                    row['track_name'],
-                    length_id_map.get(row['track_lenghts']),
-                    listening_date_id_map.get(date_time_stripped),
-                    album_id_map.get(row['album_name']),
-                    popularity_id_map.get(row['popularity'])
-                )
-            ).fetchone()
-
-            if track_id:
-                for artist in json.loads(row['artist'].replace("'", '"')):
-                    artist_id = artist_id_map.get(artist)
-                    if artist_id:
-                        conn.execute(
-                            'INSERT INTO public.artists_tracks (track_id, artist_id) VALUES (%s, %s)', 
-                            (track_id[0], artist_id)
-                        )
-                    else:
-                        print(f"Artist {artist} not found in artist_id_map")
 
 
+    # Prepare individual DataFrames for each table
+    tracks_df = combined_data[['track_name']]
+    album_df = combined_data[['album_name', 'album_type', 'total_tracks', 'release_date']].drop_duplicates()
+    listening_date_df = combined_data[['dates', 'hour', 'weekday', 'week_of_year', 'month_num', 'month_name', 'quarter', 'year', 'weekend']].drop_duplicates()
+    artists_df = combined_data[['artist']].drop_duplicates()
+    popularity_df = combined_data[['popularity']].drop_duplicates()
+    lengths_df = combined_data[['track_lenght']].drop_duplicates()
 
+    # Insert data to tables that dont have foreing keys
+    album_df.to_sql(name="album", con=postgres_engine, if_exists="append", index=False)
+    listening_date_df.to_sql(name="listening_date", con=postgres_engine, if_exists="append", index=False)
+    artists_df.to_sql(name="artists", con=postgres_engine, if_exists="append", index=False)
+    popularity_df.to_sql(name="popularity", con=postgres_engine, if_exists="append", index=False)
+    lengths_df.to_sql(name="lengths", con=postgres_engine, if_exists="append", index=False)
+
+
+    
+    
 
 ## STAGE 
 ### TESTING SECTION ###
 # _download_from_spotify_api()
 _prepare_data()
 _stage()
+
+
+
+
 
 
 # ## MODEL ##
