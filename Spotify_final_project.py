@@ -123,8 +123,8 @@ def _prepare_data():
         'track.id',
         'track.uri'
     ]
-
-    df.drop(columns=columns_to_drop, inplace=True)
+    columns_to_drop_existing = [col for col in columns_to_drop if col in df.columns] 
+    df.drop(columns=columns_to_drop_existing, inplace=True)
 
     df.rename(columns={'track.duration_ms': 'track.duration_sec'}, inplace=True)
 
@@ -379,7 +379,7 @@ def _stage():
 
 
 ### TESTING SECTION ###
-# _download_from_spotify_api()
+_download_from_spotify_api()
 _prepare_data()
 _stage()
 
