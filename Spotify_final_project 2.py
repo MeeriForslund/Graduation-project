@@ -33,14 +33,15 @@ AIRFLOW_DAGS = config.get('core', 'dags_folder')
 CURR_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
-# Spotify API credentials # Later we can create a config file to hide the below credentials
+# Spotify API credentials 
+# # LATER CREATE a config file to hide the below credentials
 client_id = '7ac4100bc0f84e978f1b4c8e4b74576b'
 client_secret = '62fed3a94a224ef48272a7b3d8ea0583'
 redirect_uri = 'http://localhost:8888/callback'
 scope = 'user-read-recently-played'
 
 
-## Function to download the json data from API and save the data in json format to SPOTIFY_JSON_TARGET
+## Function to download the json data from API and save the data in json and csv format
 def _download_from_spotify_api():
     # Set up logging
     logging.basicConfig(level=logging.INFO)
@@ -70,7 +71,7 @@ def _download_from_spotify_api():
     logging.info("Raw data saved to recently_played_tracks_raw.csv")
 
 
-## Prepare the data and save it in csv format to SPOTIFY_PREPARED_CSV
+## Prepare the data and save it in csv format
 def prepare_listening_date_dataframe():
     # Load the CSV into a DataFrame
     df = pd.read_csv('recently_played_tracks_raw.csv')
@@ -89,9 +90,6 @@ def prepare_listening_date_dataframe():
 
     # Determine if the day is a weekend
     df['weekend'] = np.where(df['weekday'].isin(['Saturday', 'Sunday']), 'Yes', 'No')
-
-    # Changing date_time column to only contain the date in date format if neccessary later
-    # df['date_time'] = df['date_time'].dt.date
 
     # Select only the columns relevant for the listening_date table
     listening_date_df = df[['date_time', 'hour', 'weekday', 'week_of_year', 'month_num', 'month_name', 'quarter', 'year', 'weekend']]
@@ -129,9 +127,6 @@ def _prepare_data():
 
     df.drop(columns=columns_to_drop, inplace=True)
 
-    # Turn track duration to seconds
-    # df['track.duration_ms'] = df['track.duration_ms'] / 1000
-
     df.rename(columns={'track.duration_ms': 'track.duration_sec'}, inplace=True)
 
     def parse_artists(artists_str):
@@ -153,7 +148,6 @@ def _prepare_data():
     listening_date_dataframe = prepare_listening_date_dataframe()
 
     # played_at column no longer needed after its extracted to other dataframe
-    # df.drop(columns=['played_at'], inplace=True)
     df.drop(columns=['played_at'], inplace=True)
     df.drop(columns=['track.artists'], inplace=True)
 
