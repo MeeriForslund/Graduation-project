@@ -177,6 +177,18 @@ def _prepare_data():
     combined_data['dates'] = combined_data['dates'].apply(remove_milliseconds)
     combined_data['dates'] = combined_data['dates'].astype(str)
 
+    # List of columns to be dropped
+    columns_to_drop = ['context.external_urls.spotify', 'context.uri', 'context.type', 'context.href']
+
+    # Drop columns if they exist
+    for column in columns_to_drop:
+        if column in combined_data.columns:
+            combined_data.drop(columns=[column], inplace=True)
+        else:
+            print(f"Column '{column}' not found in the DataFrame.")
+
+    combined_data.info()
+
     # Save the combined DataFrame to a new CSV file
     combined_data.to_csv('combined_spotify.csv', index=False)
 
@@ -329,7 +341,7 @@ postgres_engine = create_engine(
 
 def _stage():
     # Create the tables and relations, comment out after first run!
-    execute_sql_commands()
+    # execute_sql_commands()
 
     # Path to the combined CSV file
     combined_data_path = 'combined_spotify.csv'
@@ -337,6 +349,10 @@ def _stage():
     # Read the data from the combined CSV file
     combined_data = pd.read_csv(combined_data_path)
 
+    yesterday_midnight = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+    combined_data['dates'] = pd.to_datetime(combined_data['dates'])
+    combined_data = combined_data[combined_data['dates'] > yesterday_midnight]
+    combined_data['dates'] = combined_data['dates'].astype(str)
 
     # Prepare individual DataFrames for each table
     tracks_df = combined_data[['track_name', 'album_name', 'artist', 'popularity', 'track_lenght', 'dates']].copy()
@@ -346,12 +362,26 @@ def _stage():
     popularity_df = combined_data[['popularity']].drop_duplicates()
     lengths_df = combined_data[['track_lenght']].drop_duplicates()
 
-    # Insert data to tables that dont have foreing keys
-    album_df.to_sql(name="album", con=postgres_engine, if_exists="append", index=False)
-    listening_date_df.to_sql(name="listening_date", con=postgres_engine, if_exists="append", index=False)
-    artists_df.to_sql(name="artists", con=postgres_engine, if_exists="append", index=False)
-    popularity_df.to_sql(name="popularity", con=postgres_engine, if_exists="append", index=False)
-    lengths_df.to_sql(name="lengths", con=postgres_engine, if_exists="append", index=False)
+    # Load existing data from the reference tables
+    existing_album_df = pd.read_sql_table('album', con=postgres_engine)
+    existing_artists_df = pd.read_sql_table('artists', con=postgres_engine)
+    existing_popularity_df = pd.read_sql_table('popularity', con=postgres_engine)
+    existing_lengths_df = pd.read_sql_table('lengths', con=postgres_engine)
+    existing_listening_date_df = pd.read_sql_table('listening_date', con=postgres_engine)
+
+    # Identify new records
+    new_album_df = album_df[~album_df.set_index(['album_name', 'album_type', 'total_tracks', 'release_date']).index.isin(existing_album_df.set_index(['album_name', 'album_type', 'total_tracks', 'release_date']).index)]
+    new_artists_df = artists_df[~artists_df.set_index('artist').index.isin(existing_artists_df.set_index('artist').index)]
+    new_popularity_df = popularity_df[~popularity_df.set_index('popularity').index.isin(existing_popularity_df.set_index('popularity').index)]
+    new_lengths_df = lengths_df[~lengths_df.set_index('track_lenght').index.isin(existing_lengths_df.set_index('track_lenght').index)]
+    new_listening_date_df = listening_date_df[~listening_date_df.set_index('dates').index.isin(existing_listening_date_df.set_index('dates').index)]
+
+    # Insert only new records into the reference tables
+    new_album_df.to_sql(name="album", con=postgres_engine, if_exists="append", index=False)
+    new_artists_df.to_sql(name="artists", con=postgres_engine, if_exists="append", index=False)
+    new_popularity_df.to_sql(name="popularity", con=postgres_engine, if_exists="append", index=False)
+    new_lengths_df.to_sql(name="lengths", con=postgres_engine, if_exists="append", index=False)
+    new_listening_date_df.to_sql(name="listening_date", con=postgres_engine, if_exists="append", index=False)
 
     # Load data from the foreign key tables to get the IDs
     album_ids = pd.read_sql_table('album', con=postgres_engine)[['album_id', 'album_name']]
@@ -376,6 +406,8 @@ def _stage():
 
     # Insert data into the tracks table
     tracks_final_df.to_sql(name='tracks', con=postgres_engine, if_exists='append', index=False)
+
+
 
 
 
