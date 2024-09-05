@@ -1,6 +1,6 @@
-#from airflow import DAG
-#from airflow.operators.python import PythonOperator, BranchPythonOperator
-#from airflow.operators.bash import BashOperator
+# from airflow import DAG
+# from airflow.operators.python import PythonOperator, BranchPythonOperator
+# from airflow.operators.bash import BashOperator
 
 import os
 import requests
@@ -11,7 +11,6 @@ import configparser
 
 import psycopg2 as ps 
 from sqlalchemy import create_engine  
-
 import matplotlib.pyplot as oPlot
 
 from datetime import datetime, timedelta
@@ -185,7 +184,7 @@ def _prepare_data():
 
 def execute_sql_commands():
     # Connect to the database using psycopg2
-    conn = ps.connect(dbname="tuomas", user="tuomas")
+    conn = ps.connect(dbname="graduation_project", user="zakariyafarah", password="AWAD12")
     cur = conn.cursor()
 
     # List of SQL commands to execute
@@ -308,20 +307,20 @@ ALTER TABLE IF EXISTS public.tracks
     cur.close()
     conn.close()
 
-def postgres_creator():  # sqlalchemy requires callback-function for connections
-  return ps.connect(
-            dbname="tuomas",  # name of schema
-            user="tuomas"
-        #   password=db_pw,
-        #   port=5432,          # default port is 5432, but can be specified
-        #   host="localhost"
+def postgres_creator():
+    return ps.connect(
+        dbname="graduation_project",  # name of schema
+        user="zakariyafarah",         # your username
+        password="AWAD12",            # your password
+        host="localhost",             # use 'localhost' as host if it's local
+        port="5432"                   # default PostgreSQL port
     )
+
 
 
 # Connect to the PostgreSQL database
 postgres_engine = create_engine(
-    url="postgresql+psycopg2://localhost",  # driver identification + dbms api
-    creator=postgres_creator  # connection details
+    "postgresql+psycopg2://zakariyafarah:AWAD12@localhost/graduation_project"
 )
 
 
@@ -380,7 +379,7 @@ def _stage():
 
 
 ### TESTING SECTION ###
-_download_from_spotify_api()
+# _download_from_spotify_api()
 _prepare_data()
 _stage()
 
@@ -389,7 +388,7 @@ _stage()
 
 # def _model():
 #     # Change dbname to be the name of your schema and user to be the owner of said database schema
-#     conn = ps.connect(dbname="tuomas", user="tuomas")
+#     conn = ps.connect(dbname="graduation_project", user="zakariyafarah")
 
 #     cur = conn.cursor()
 
