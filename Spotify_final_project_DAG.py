@@ -117,7 +117,7 @@ def _prepare_data():
     df = pd.read_csv('recently_played_tracks_raw.csv')
     
     columns_to_drop = [
-        'context', 
+        #'context', 
         'track.album.artists', 
         'track.album.available_markets', 
         'track.album.uri',
@@ -346,12 +346,8 @@ def postgres_creator():  # sqlalchemy requires callback-function for connections
     )
 
 
-# Connect to the PostgreSQL database
-postgres_engine = create_engine(
-    url="postgresql+psycopg2://localhost",  # driver identification + dbms api
-    creator=postgres_creator  # connection details
-)
-
+# Update your connection string accordingly (replace with your actual username and password)
+postgres_engine = create_engine('postgresql+psycopg2://zakariyafarah:AWAD12@localhost/graduation_project')
 
 ## STAGE 
 
