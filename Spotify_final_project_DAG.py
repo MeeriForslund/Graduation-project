@@ -603,14 +603,14 @@ def _model():
 
     least_played_artists = artist_play_count.tail(15)
 
-    fig, ax = plt.subplots(figsize=(6, 4))
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     ax.axis('off')
 
     for i, artist in enumerate(least_played_artists['artist']):
-        ax.text(0.5, 1 - i * 0.2, artist, fontsize=15, ha='center', va='center')
+        ax.text(0.5, 1 - i * 0.2, artist, fontsize=16, ha='center', va='center')
 
-    plt.title('Your 15 Least Played Artists', fontsize=18, pad=40)
+    plt.title('Your 15 Least Played Artists', fontsize=19, pad=40)
 
     plt.savefig('pic_6.png', bbox_inches='tight')
 
