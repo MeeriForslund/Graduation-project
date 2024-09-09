@@ -347,12 +347,37 @@ postgres_engine = create_engine(
     creator=postgres_creator  # connection details
 )
 
+def check_table_exists(table_name, conn):
+    # Query to check if a table exists in the database
+    query = f"""
+    SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = '{table_name}'
+    );
+    """
+    cur = conn.cursor()
+    cur.execute(query)
+    result = cur.fetchone()[0]
+    cur.close()
+    return result
 
 ## STAGE 
 
+
+
 def _stage():
-    # Create the tables and relations, comment out after first run!
-    # execute_sql_commands() # If statement here for no commenting out stuff check if table excists
+    # Check if the tables already exist
+    tables_to_check = ['tracks', 'album', 'listening_date', 'artists', 'popularity', 'lengths']
+    conn = postgres_creator()
+    tables_missing = any(not check_table_exists(table, conn) for table in tables_to_check)
+
+    if tables_missing:
+        print("Some tables are missing, executing SQL commands to create them.")
+        execute_sql_commands()
+    else:
+        print("All required tables already exist.")
+
+    conn.close()
 
     # Path to the combined CSV file
     combined_data_path = 'combined_spotify.csv'
@@ -360,10 +385,11 @@ def _stage():
     # Read the data from the combined CSV file
     combined_data = pd.read_csv(combined_data_path)
 
-    yesterday_midnight = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
-    combined_data['dates'] = pd.to_datetime(combined_data['dates'])
-    combined_data = combined_data[combined_data['dates'] > yesterday_midnight]
-    combined_data['dates'] = combined_data['dates'].astype(str)
+    # # Used to limit the inputs to only previous days listened songs, not necessary to use
+    # yesterday_midnight = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+    # combined_data['dates'] = pd.to_datetime(combined_data['dates'])
+    # combined_data = combined_data[combined_data['dates'] > yesterday_midnight]
+    # combined_data['dates'] = combined_data['dates'].astype(str)
 
     # Prepare individual DataFrames for each table
     tracks_df = combined_data[['track_name', 'album_name', 'artist', 'popularity', 'track_lenght', 'dates']].copy()
@@ -379,6 +405,8 @@ def _stage():
     existing_popularity_df = pd.read_sql_table('popularity', con=postgres_engine)
     existing_lengths_df = pd.read_sql_table('lengths', con=postgres_engine)
     existing_listening_date_df = pd.read_sql_table('listening_date', con=postgres_engine)
+
+    existing_tracks_df = pd.read_sql_table('tracks', con=postgres_engine)
 
     # Identify new records
     new_album_df = album_df[~album_df.set_index(['album_name', 'album_type', 'total_tracks', 'release_date']).index.isin(existing_album_df.set_index(['album_name', 'album_type', 'total_tracks', 'release_date']).index)]
@@ -415,8 +443,17 @@ def _stage():
     # Prepare the final DataFrame for the tracks table
     tracks_final_df = tracks_df[['track_name', 'length_id', 'date_id', 'album_id', 'popularity_id', 'artist_id']].copy()
 
-    # Insert data into the tracks table
-    tracks_final_df.to_sql(name='tracks', con=postgres_engine, if_exists='append', index=False)
+    # Identify existing records in the 'tracks' table
+    existing_tracks_df = existing_tracks_df[['track_name', 'length_id', 'date_id', 'album_id', 'popularity_id', 'artist_id']]
+
+    # Filter out duplicates by checking for existing records
+    new_tracks_df = tracks_final_df[~tracks_final_df.set_index(['track_name', 'length_id', 'date_id', 'album_id', 'popularity_id', 'artist_id']).index.isin(existing_tracks_df.set_index(['track_name', 'length_id', 'date_id', 'album_id', 'popularity_id', 'artist_id']).index)]
+
+    # Insert only new records into the tracks table
+    new_tracks_df.to_sql(name='tracks', con=postgres_engine, if_exists='append', index=False)
+
+    # # Insert data into the tracks table
+    # tracks_final_df.to_sql(name='tracks', con=postgres_engine, if_exists='append', index=False)
 
 
 ## MODEL ##
@@ -566,14 +603,14 @@ def _model():
 
     least_played_artists = artist_play_count.tail(15)
 
-    fig, ax = plt.subplots(figsize=(6, 4))
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     ax.axis('off')
 
     for i, artist in enumerate(least_played_artists['artist']):
-        ax.text(0.5, 1 - i * 0.2, artist, fontsize=15, ha='center', va='center')
+        ax.text(0.5, 1 - i * 0.2, artist, fontsize=16, ha='center', va='center')
 
-    plt.title('Your 15 Least Played Artists', fontsize=18)
+    plt.title('Your 15 Least Played Artists', fontsize=19, pad=40)
 
     plt.savefig('pic_6.png', bbox_inches='tight')
 
@@ -720,7 +757,7 @@ def _model():
     plt.tight_layout()
     plt.savefig('pic_9.png') 
 
-    ## Picture nr.10 
+    ## Picture nr.10 Relationship Between Artist Popularity and Play Frequency
     cur.execute("""
         SELECT
             a.artist AS artist_name,
@@ -758,7 +795,6 @@ def _model():
 
     cur.close()
     conn.close()
- 
 
 ## DAG ##
 with DAG(
@@ -788,6 +824,9 @@ with DAG(
     )
     
     download >> prepare_data >> stage >> model
+
+
+
 
 
 

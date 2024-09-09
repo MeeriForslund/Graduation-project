@@ -43,7 +43,7 @@ h1 {
 
 .image-container img {
   width: 100%;
-  height: auto;
+  height: auto; /* Ensure the image scales properly */
   display: block;
 }
 
@@ -54,9 +54,34 @@ h1 {
   text-align: center;
 }
 
+/* Adjustments for Visualization 10 */
+.visualization-10-container {
+  flex: 1 1 100%; /* Full width */
+  max-width: 100%; /* Keep it within the full width of the page */
+  margin: 20px 0;
+  padding: 10px;
+  border: 2px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border-radius: 10px;
+  background-color: white;
+  text-align: center;
+}
+
+.visualization-10-container p {
+  font-size: 1.2rem; /* Ensure the font is readable but not overwhelming */
+  line-height: 1.5; /* Improve readability */
+  color: #333;
+}
+
 @media (max-width: 768px) {
   /* On smaller screens, display one image per row */
   .image-container {
     flex: 1 1 100%;
+  }
+
+  .visualization-10-container {
+    flex: 1 1 100%;
+    max-width: 100%;
   }
 }
