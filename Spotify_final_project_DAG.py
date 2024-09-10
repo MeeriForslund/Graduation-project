@@ -574,47 +574,9 @@ def _model():
 
     plt.savefig('pic_5.png')
 
-    ## Picture nr.6 15 Least played artists
 
-    cur.execute("""
-    SELECT a.artist, COUNT(t.track_id) AS play_count
-    FROM 
-        public.tracks t
-    JOIN 
-        public.artists a ON t.artist_id = a.artist_id
-    GROUP BY 
-        a.artist
-    ORDER BY 
-        play_count ASC;
-    """)
 
-    data = cur.fetchall()
-
-    df = pd.DataFrame(data, columns=['artist','play_count'])
-    df = df[df['artist'].str.len() > 2]
-
-    df['artist'] = df['artist'].apply(eval)
-
-    df_expanded = df.explode('artist').reset_index(drop=True) 
-
-    artist_play_count = df_expanded.groupby('artist', as_index=False)['play_count'].sum()
-    
-    artist_play_count = artist_play_count.sort_values(by='play_count', ascending=False).reset_index(drop=True)
-
-    least_played_artists = artist_play_count.tail(15)
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-
-    ax.axis('off')
-
-    for i, artist in enumerate(least_played_artists['artist']):
-        ax.text(0.5, 1 - i * 0.2, artist, fontsize=15, ha='center', va='center')
-
-    plt.title('Your 15 Least Played Artists', fontsize=18, pad=40)
-
-    plt.savefig('pic_6.png', bbox_inches='tight')
-
-    ## Picture nr.7 histogram hour plot
+    ## Picture nr.6 histogram hour plot
     cur.execute("""
     SELECT hour, weekday FROM listening_date;
     """)
@@ -631,9 +593,9 @@ def _model():
     plt.xlabel('Day of the Week', fontsize=14)
     plt.ylabel('Number of Tracks Played', fontsize=14)
 
-    plt.savefig('pic_7.png')
+    plt.savefig('pic_6.png')
 
-    ## Picture nr.8 Weekly listening trends
+    ## Picture nr.7 Weekly listening trends
 
     cur.execute("""
     WITH WeeklyListens AS (
@@ -707,9 +669,9 @@ def _model():
 
     # Show plot
     plt.tight_layout()
-    plt.savefig('pic_8.png')  
+    plt.savefig('pic_7.png')  
 
-    ## Picture nr.9 Personal most popular songs listened during the weekend
+    ## Picture nr.8 Personal most popular songs listened during the weekend
     cur.execute("""
     SELECT
         t.track_id,
@@ -755,9 +717,9 @@ def _model():
 
     # Display the plot
     plt.tight_layout()
-    plt.savefig('pic_9.png') 
+    plt.savefig('pic_8.png') 
 
-    ## Picture nr.10 Relationship Between Artist Popularity and Play Frequency
+    ## Picture nr.9 Relationship Between Artist Popularity and Play Frequency
     cur.execute("""
         SELECT
             a.artist AS artist_name,
@@ -791,7 +753,47 @@ def _model():
     plt.legend(title='Artist Category')
     plt.tight_layout()
 
-    plt.savefig('pic_10.png')
+    plt.savefig('pic_9.png')
+
+    ## Picture nr.10 15 Least played artists
+
+    cur.execute("""
+    SELECT a.artist, COUNT(t.track_id) AS play_count
+    FROM 
+        public.tracks t
+    JOIN 
+        public.artists a ON t.artist_id = a.artist_id
+    GROUP BY 
+        a.artist
+    ORDER BY 
+        play_count ASC;
+    """)
+
+    data = cur.fetchall()
+
+    df = pd.DataFrame(data, columns=['artist','play_count'])
+    df = df[df['artist'].str.len() > 2]
+
+    df['artist'] = df['artist'].apply(eval)
+
+    df_expanded = df.explode('artist').reset_index(drop=True) 
+
+    artist_play_count = df_expanded.groupby('artist', as_index=False)['play_count'].sum()
+    
+    artist_play_count = artist_play_count.sort_values(by='play_count', ascending=False).reset_index(drop=True)
+
+    least_played_artists = artist_play_count.tail(15)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    ax.axis('off')
+
+    for i, artist in enumerate(least_played_artists['artist']):
+        ax.text(0.5, 1 - i * 0.2, artist, fontsize=15, ha='center', va='center')
+
+    plt.title('Your 15 Least Played Artists', fontsize=18, pad=40)
+
+    plt.savefig('pic_10.png', bbox_inches='tight')
 
     cur.close()
     conn.close()
