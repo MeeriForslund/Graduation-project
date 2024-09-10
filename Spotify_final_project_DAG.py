@@ -574,47 +574,9 @@ def _model():
 
     plt.savefig('pic_5.png')
 
-    ## Picture nr.6 15 Least played artists
 
-    cur.execute("""
-    SELECT a.artist, COUNT(t.track_id) AS play_count
-    FROM 
-        public.tracks t
-    JOIN 
-        public.artists a ON t.artist_id = a.artist_id
-    GROUP BY 
-        a.artist
-    ORDER BY 
-        play_count ASC;
-    """)
 
-    data = cur.fetchall()
-
-    df = pd.DataFrame(data, columns=['artist','play_count'])
-    df = df[df['artist'].str.len() > 2]
-
-    df['artist'] = df['artist'].apply(eval)
-
-    df_expanded = df.explode('artist').reset_index(drop=True) 
-
-    artist_play_count = df_expanded.groupby('artist', as_index=False)['play_count'].sum()
-    
-    artist_play_count = artist_play_count.sort_values(by='play_count', ascending=False).reset_index(drop=True)
-
-    least_played_artists = artist_play_count.tail(15)
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-
-    ax.axis('off')
-
-    for i, artist in enumerate(least_played_artists['artist']):
-        ax.text(0.5, 1 - i * 0.2, artist, fontsize=15, ha='center', va='center')
-
-    plt.title('Your 15 Least Played Artists', fontsize=18, pad=40)
-
-    plt.savefig('pic_6.png', bbox_inches='tight')
-
-    ## Picture nr.7 histogram hour plot
+    ## Picture nr.6 histogram hour plot
     cur.execute("""
     SELECT hour, weekday FROM listening_date;
     """)
@@ -631,9 +593,9 @@ def _model():
     plt.xlabel('Day of the Week', fontsize=14)
     plt.ylabel('Number of Tracks Played', fontsize=14)
 
-    plt.savefig('pic_7.png')
+    plt.savefig('pic_6.png')
 
-    ## Picture nr.8 Weekly listening trends
+    ## Picture nr.7 Weekly listening trends
 
     cur.execute("""
     WITH WeeklyListens AS (
@@ -707,9 +669,9 @@ def _model():
 
     # Show plot
     plt.tight_layout()
-    plt.savefig('pic_8.png')  
+    plt.savefig('pic_7.png')  
 
-    ## Picture nr.9 Personal most popular songs listened during the weekend
+    ## Picture nr.8 Personal most popular songs listened during the weekend
     cur.execute("""
     SELECT
         t.track_id,
@@ -755,9 +717,9 @@ def _model():
 
     # Display the plot
     plt.tight_layout()
-    plt.savefig('pic_9.png') 
+    plt.savefig('pic_8.png') 
 
-    ## Picture nr.10 Relationship Between Artist Popularity and Play Frequency
+    ## Picture nr.9 Relationship Between Artist Popularity and Play Frequency
     cur.execute("""
         SELECT
             a.artist AS artist_name,
@@ -791,7 +753,309 @@ def _model():
     plt.legend(title='Artist Category')
     plt.tight_layout()
 
-    plt.savefig('pic_10.png')
+    plt.savefig('pic_9.png')
+
+    ## Picture nr.10 15 Least played artists
+
+    cur.execute("""
+    SELECT a.artist, COUNT(t.track_id) AS play_count
+    FROM 
+        public.tracks t
+    JOIN 
+        public.artists a ON t.artist_id = a.artist_id
+    GROUP BY 
+        a.artist
+    ORDER BY 
+        play_count ASC;
+    """)
+
+    data = cur.fetchall()
+
+    df = pd.DataFrame(data, columns=['artist','play_count'])
+    df = df[df['artist'].str.len() > 2]
+
+    df['artist'] = df['artist'].apply(eval)
+
+    df_expanded = df.explode('artist').reset_index(drop=True) 
+
+    artist_play_count = df_expanded.groupby('artist', as_index=False)['play_count'].sum()
+    
+    artist_play_count = artist_play_count.sort_values(by='play_count', ascending=False).reset_index(drop=True)
+
+    least_played_artists = artist_play_count.tail(15)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    ax.axis('off')
+
+    for i, artist in enumerate(least_played_artists['artist']):
+        ax.text(0.5, 1 - i * 0.2, artist, fontsize=15, ha='center', va='center')
+
+    plt.title('Your 15 Least Played Artists', fontsize=18, pad=40)
+
+    plt.savefig('pic_10.png', bbox_inches='tight')
+
+    ## Picture nro.11 most listened albums
+    cur.execute("""
+    SELECT 
+    a.album_name,
+        COUNT(t.track_id) AS listen_count
+    FROM 
+        public.tracks t
+    JOIN 
+        public.album a ON t.album_id = a.album_id
+    GROUP BY 
+        a.album_name
+    ORDER BY 
+        listen_count DESC;
+    """)
+
+    data = cur.fetchall()
+    df = pd.DataFrame(data, columns=['album_name','listen_count'])
+    df = df.head(10)
+
+    plt.figure(figsize=(10, 6))  
+    plt.barh(df['album_name'], df['listen_count'], color='skyblue')
+
+    plt.xlabel('Number of Listens')
+    plt.ylabel('Album Name')
+    plt.title('Most Listened Albums')
+
+    plt.gca().invert_yaxis()
+
+    plt.tight_layout()
+    plt.savefig('pic_11.png', bbox_inches='tight')
+
+
+    ## Picture nro.12 weekly most listened albums
+    cur.execute("""
+        WITH WeeklyListenCounts AS (
+            SELECT 
+                a.album_name,
+                d.week_of_year,
+                d.year,
+                COUNT(t.track_id) AS listen_count
+            FROM 
+                public.tracks t
+            JOIN 
+                public.album a ON t.album_id = a.album_id
+            JOIN 
+                public.listening_date d ON t.date_id = d.date_id
+            WHERE 
+                d.year = EXTRACT(YEAR FROM CURRENT_DATE)
+            GROUP BY 
+                a.album_name, d.week_of_year, d.year
+        ),
+        MaxListenCounts AS (
+            SELECT
+                week_of_year,
+                year,
+                MAX(listen_count) AS max_listen_count
+            FROM
+                WeeklyListenCounts
+            GROUP BY
+                week_of_year, year
+        )
+        SELECT
+            w.album_name,
+            w.week_of_year,
+            w.year,
+            w.listen_count
+        FROM
+            WeeklyListenCounts w
+        JOIN
+            MaxListenCounts m
+        ON
+            w.week_of_year = m.week_of_year
+            AND w.year = m.year
+            AND w.listen_count = m.max_listen_count
+        ORDER BY
+            w.week_of_year, w.year;
+    """)
+
+    data = cur.fetchall()
+    df = pd.DataFrame(data, columns=['album_name', 'week_of_year', 'year', 'listen_count'])
+
+    plt.figure(figsize=(12, 8))
+
+    # Create the barplot
+    sns.barplot(x='week_of_year', y='listen_count', hue='album_name', data=df, palette='coolwarm')
+
+    plt.xlabel('Week Number')
+    plt.ylabel('Number of Listens')
+    plt.title('Most Listened Albums per Week')
+
+    plt.tight_layout()
+
+    plt.show()
+    plt.savefig('pic_12.png', bbox_inches='tight')
+
+    ## Picture nro.13 Personal most popular albums based on total track popularity score
+    cur.execute("""
+        SELECT 
+            a.album_name,
+            SUM(p.popularity) AS total_popularity
+        FROM 
+            public.tracks t
+        JOIN 
+            public.album a ON t.album_id = a.album_id
+        JOIN 
+            public.listening_date d ON t.date_id = d.date_id
+        JOIN 
+            public.popularity p ON t.popularity_id = p.popularity_id
+        WHERE 
+            d.week_of_year = EXTRACT(WEEK FROM CURRENT_DATE)
+            AND d.year = EXTRACT(YEAR FROM CURRENT_DATE)
+        GROUP BY 
+            a.album_name
+        ORDER BY 
+            total_popularity DESC
+        LIMIT 10;
+    """)
+
+    # Fetch the data
+    data = cur.fetchall()
+
+    # Create a DataFrame
+    df = pd.DataFrame(data, columns=['album_name', 'total_popularity'])
+
+    # Plot the data
+    plt.figure(figsize=(10, 6))
+
+    # Create the barplot
+    sns.barplot(x='total_popularity', y='album_name', data=df, palette='coolwarm')
+
+    plt.xlabel('Total Popularity Score (This Week)')
+    plt.ylabel('Album Name')
+    plt.title('Top 10 Most Popular Albums This Week (Based on Total Popularity Score)')
+
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+    # Save the plot
+    plt.savefig('pic_13.png', bbox_inches='tight')
+
+
+    ## Picture nro.14 Least listened albums this month
+    cur.execute("""
+        SELECT 
+            a.album_name,
+            COUNT(t.track_id) AS listen_count
+        FROM 
+            public.tracks t
+        JOIN 
+            public.album a ON t.album_id = a.album_id
+        JOIN 
+            public.listening_date d ON t.date_id = d.date_id
+        WHERE 
+            d.month_num = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND d.year = EXTRACT(YEAR FROM CURRENT_DATE)
+        GROUP BY 
+            a.album_name
+        ORDER BY 
+            listen_count ASC
+        LIMIT 10;
+    """)
+
+    # Fetch the data
+    data = cur.fetchall()
+
+    # Create a DataFrame
+    df = pd.DataFrame(data, columns=['album_name', 'listen_count'])
+
+    # Plot the data
+    plt.figure(figsize=(10, 6))
+
+    # Create the barplot
+    sns.barplot(x='listen_count', y='album_name', data=df, palette='coolwarm')
+
+    plt.xlabel('Number of Listens (This Month)')
+    plt.ylabel('Album Name')
+    plt.title('Top 10 Least Listened Albums This Month')
+
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+    # Save the plot
+    plt.savefig('pic_14.png', bbox_inches='tight')
+    
+    ## Picture nro.15 Least listened artists with more than 10 listenings
+
+    cur.execute("""
+    WITH TotalListens AS (
+            SELECT 
+                a.artist_id,
+                COUNT(t.track_id) AS total_listens
+            FROM 
+                public.tracks t
+            JOIN 
+                public.artists a ON t.artist_id = a.artist_id
+            JOIN 
+                public.listening_date d ON t.date_id = d.date_id
+            WHERE 
+                d.year = EXTRACT(YEAR FROM CURRENT_DATE)
+            GROUP BY 
+                a.artist_id
+            HAVING 
+                COUNT(t.track_id) > 5
+        ),
+        MonthlyListens AS (
+            SELECT 
+                a.artist_id,
+                a.artist,
+                COUNT(t.track_id) AS monthly_listens
+            FROM 
+                public.tracks t
+            JOIN 
+                public.artists a ON t.artist_id = a.artist_id
+            JOIN 
+                public.listening_date d ON t.date_id = d.date_id
+            WHERE 
+                d.month_num = EXTRACT(MONTH FROM CURRENT_DATE)
+                AND d.year = EXTRACT(YEAR FROM CURRENT_DATE)
+            GROUP BY 
+                a.artist_id, a.artist
+        )
+        SELECT 
+            m.artist,
+            COALESCE(m.monthly_listens, 0) AS monthly_listens
+        FROM 
+            MonthlyListens m
+        JOIN 
+            TotalListens t ON m.artist_id = t.artist_id
+        ORDER BY 
+            monthly_listens ASC
+        LIMIT 15;
+    """)
+
+    # Fetch the data
+    data = cur.fetchall()
+
+    # Create a DataFrame
+    df = pd.DataFrame(data, columns=['artist', 'monthly_listens'])
+
+    # Plot the data
+    plt.figure(figsize=(12, 8))
+
+    # Create the barplot
+    sns.barplot(x='monthly_listens', y='artist', data=df, palette='coolwarm')
+
+    plt.xlabel('Number of Listens (This Month)')
+    plt.ylabel('Artist')
+    plt.title('15 Least Listened Artists This Month (With More Than 5 Total Listenings)')
+
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+    # Save the plot
+    plt.savefig('pic_15.png', bbox_inches='tight')
+    
 
     cur.close()
     conn.close()
