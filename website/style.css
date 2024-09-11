@@ -23,17 +23,15 @@ h1 {
 
 .gallery {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-around; /* Spaces out images evenly */
+  flex-direction: column; /* Display images in a single column */
   gap: 20px; /* Space between images */
-  max-width: 1200px;
+  max-width: 800px;
   margin: 0 auto; /* Center the gallery on the page */
 }
 
 .image-container {
-  flex: 1 1 calc(50% - 40px); /* Two images per row with spacing */
-  max-width: 45%;
-  margin: 10px;
+  width: 100%; /* Full width */
+  margin: 20px 0;
   border: 2px solid #ccc;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -56,8 +54,7 @@ h1 {
 
 /* Adjustments for Visualization 10 */
 .visualization-10-container {
-  flex: 1 1 100%; /* Full width */
-  max-width: 100%; /* Keep it within the full width of the page */
+  width: 100%; /* Full width */
   margin: 20px 0;
   padding: 10px;
   border: 2px solid #ccc;
@@ -77,11 +74,10 @@ h1 {
 @media (max-width: 768px) {
   /* On smaller screens, display one image per row */
   .image-container {
-    flex: 1 1 100%;
+    width: 100%;
   }
 
   .visualization-10-container {
-    flex: 1 1 100%;
-    max-width: 100%;
+    width: 100%;
   }
 }
