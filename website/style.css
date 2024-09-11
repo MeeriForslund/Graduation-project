@@ -1,0 +1,87 @@
+/* Reset some default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+h1 {
+  color: #333;
+  font-size: 2rem; /* Slightly bigger for readability */
+}
+
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around; /* Spaces out images evenly */
+  gap: 20px; /* Space between images */
+  max-width: 1200px;
+  margin: 0 auto; /* Center the gallery on the page */
+}
+
+.image-container {
+  flex: 1 1 calc(50% - 40px); /* Two images per row with spacing */
+  max-width: 45%;
+  margin: 10px;
+  border: 2px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border-radius: 10px;
+  background-color: white;
+}
+
+.image-container img {
+  width: 100%;
+  height: auto; /* Ensure the image scales properly */
+  display: block;
+}
+
+.image-container p {
+  padding: 10px;
+  font-size: 1.1rem; /* Slightly bigger font for readability */
+  color: #666;
+  text-align: center;
+}
+
+/* Adjustments for Visualization 10 */
+.visualization-10-container {
+  flex: 1 1 100%; /* Full width */
+  max-width: 100%; /* Keep it within the full width of the page */
+  margin: 20px 0;
+  padding: 10px;
+  border: 2px solid #ccc;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border-radius: 10px;
+  background-color: white;
+  text-align: center;
+}
+
+.visualization-10-container p {
+  font-size: 1.2rem; /* Ensure the font is readable but not overwhelming */
+  line-height: 1.5; /* Improve readability */
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  /* On smaller screens, display one image per row */
+  .image-container {
+    flex: 1 1 100%;
+  }
+
+  .visualization-10-container {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
